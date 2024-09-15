@@ -1,0 +1,6 @@
+.settings/
+
+Build/*
+Debug/*
+Release/*
+

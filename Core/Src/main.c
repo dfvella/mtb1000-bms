@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
+#include "controller.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -96,31 +96,14 @@ int main(void)
   MX_I2C1_Init();
   MX_LPUART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  controller_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	  GPIO_PinState buttonState = HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
-//
-//	  HAL_GPIO_TogglePin(LED_1_GPIO_Port, LED_1_Pin);
-//	  HAL_GPIO_TogglePin(LED_2_GPIO_Port, LED_2_Pin);
-//	  HAL_GPIO_TogglePin(LED_3_GPIO_Port, LED_3_Pin);
-//	  HAL_GPIO_WritePin(LED_4_GPIO_Port, LED_4_Pin, buttonState);
-////	  printf("Hello World!\n");
-//	  HAL_Delay(500);
-
-	  printf("scanning i2c...\n");
-	  for (uint8_t i = 0; i < 128; i++)
-	  {
-		  if (HAL_I2C_IsDeviceReady(&hi2c1, (i << 1), 3, 10) == HAL_OK)
-		  {
-			  printf("device at 0x%X\n", i);
-		  }
-	  }
-	  HAL_Delay(3000);
+	  controller_run();
 
     /* USER CODE END WHILE */
 
@@ -147,7 +130,7 @@ void SystemClock_Config(void)
   * in the RCC_OscInitTypeDef structure.
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_DIV4;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
@@ -196,7 +179,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x00000E14;
+  hi2c1.Init.Timing = 0x0010061A;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;

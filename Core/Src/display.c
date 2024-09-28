@@ -111,10 +111,10 @@ void display_update(controller_state_E state)
 		break;
 
 	case STATE_FAULT:
-		HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin, display_fault & 1);
-		HAL_GPIO_WritePin(LED_2_GPIO_Port, LED_2_Pin, display_fault & 2);
-		HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin, display_fault & 4);
-		HAL_GPIO_WritePin(LED_4_GPIO_Port, LED_4_Pin, display_fault & 8);
+		HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin, display_fault & 8);
+		HAL_GPIO_WritePin(LED_2_GPIO_Port, LED_2_Pin, display_fault & 4);
+		HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin, display_fault & 2);
+		HAL_GPIO_WritePin(LED_4_GPIO_Port, LED_4_Pin, display_fault & 1);
 		break;
 
 	case STATE_SHUTDOWN:
@@ -160,7 +160,15 @@ void display_setSOC(uint8_t soc)
 
 void display_setFault(batt_fault_E fault)
 {
-	display_fault = fault;
+	display_fault = 0;
+	for (uint32_t i = 0; i < FAULT_COUNT; i++)
+	{
+		if ((fault >> i) & 1)
+		{
+			display_fault = i + 1;
+			break;
+		}
+	}
 }
 
 uint8_t dislpay_getButtonPress(void)

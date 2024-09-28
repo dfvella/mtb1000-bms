@@ -34,6 +34,9 @@ static uint16_t pack_voltage;
 static int32_t pack_current;
 static uint8_t adc_select;
 static batt_fetState_E pch_state;
+static batt_fetState_E chg_state;
+static batt_fetState_E dsg_state;
+static batt_fetState_E bal_state[CELL_COUNT];
 static uint8_t faults;
 static uint16_t v_min;
 static uint16_t v_max;
@@ -78,12 +81,19 @@ void batt_init(void)
 	pack_current = 0;
 	adc_select = 1;
 	pch_state = FET_OFF;
+	chg_state = FET_OFF;
+	dsg_state = FET_OFF;
 	faults = 0;
 	v_min = 0;
 	v_max = 0;
 	v_avg = 0;
 	v_sum = 0;
 	t_max = 0;
+
+	for (uint32_t i = 0; i < CELL_COUNT; i++)
+	{
+		bal_state[i] = FET_OFF;
+	}
 
 	status |= ADC121_init(&adc, &hi2c1, I2C_TIMEOUT_MS);
 	status |= BQ76930_init(&bq, &hi2c1, &config, I2C_TIMEOUT_MS);
@@ -280,19 +290,45 @@ uint8_t batt_getFaultMask(void)
 	return faults;
 }
 
+batt_fetState_E batt_getFetState(batt_fet_E fet)
+{
+	switch (fet)
+	{
+	case FET_PCH:
+		return pch_state;
+
+	case FET_CHG:
+		return chg_state;
+
+	case FET_DSG:
+		return dsg_state;
+
+	default:
+		return FET_OFF;
+	}
+}
+
+batt_fetState_E batt_getBalanceState(batt_cell_E cell)
+{
+	return bal_state[cell];
+}
+
 void batt_setFetState(batt_fet_E fet, batt_fetState_E state)
 {
 	switch (fet)
 	{
 	case FET_PCH:
+		pch_state = state;
 		TCA9534_writePin(&tca, CHANNEL_PCHG_EN, (state == FET_ON) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 		break;
 
 	case FET_CHG:
+		chg_state = state;
 		BQ76930_setCharge(&bq, (state == FET_ON) ? BQ76930_FET_STATE_ON : BQ76930_FET_STATE_OFF);
 		break;
 
 	case FET_DSG:
+		dsg_state = state;
 		BQ76930_setDischarge(&bq, (state == FET_ON) ? BQ76930_FET_STATE_ON : BQ76930_FET_STATE_OFF);
 		break;
 
@@ -303,6 +339,7 @@ void batt_setFetState(batt_fet_E fet, batt_fetState_E state)
 
 void batt_setBalance(batt_cell_E cell, batt_fetState_E state)
 {
+	bal_state[cell] = state;
 	BQ76930_setBalance(&bq, getBQCell(cell), (state == FET_ON) ? BQ76930_FET_STATE_ON : BQ76930_FET_STATE_OFF);
 }
 

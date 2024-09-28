@@ -58,10 +58,10 @@ typedef enum
 
 typedef enum
 {
+	FAULT_OC,
+	FAULT_SC,
 	FAULT_OV,
 	FAULT_UV,
-	FAULT_SC,
-	FAULT_OC,
 	FAULT_BQ,
 	FAULT_OT,
 	FAULT_COMMS,
@@ -77,6 +77,8 @@ int32_t batt_getPackCurrent(void);
 uint8_t batt_getTemp(batt_temp_E temp);
 uint8_t batt_getFault(batt_fault_E fault);
 uint8_t batt_getFaultMask(void);
+batt_fetState_E batt_getFetState(batt_fet_E fet);
+batt_fetState_E batt_getBalanceState(batt_cell_E cell);
 void batt_setFetState(batt_fet_E fet, batt_fetState_E state);
 void batt_setBalance(batt_cell_E cell, batt_fetState_E state);
 void batt_shutdown(void);

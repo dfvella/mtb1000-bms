@@ -74,9 +74,9 @@ static uint8_t crc8(uint8_t *data, uint32_t len)
 	return crc;
 }
 
-static int32_t interpolate(int32_t x, int32_t x1, int32_t x2, int32_t y1, int32_t y2)
+static int64_t interpolate(int64_t x, int64_t x1, int64_t x2, int64_t y1, int64_t y2)
 {
-	return (((y2 - y1) / (x2 - x1)) * (x - x1)) + y1;
+	return (((y2 - y1) * (x - x1)) / (x2 - x1)) + y1;
 }
 
 static uint16_t BQ76930_adc2Volt(BQ76930_inst_S *inst, uint16_t adc)
@@ -110,7 +110,7 @@ static uint8_t BQ76930_adc2Temp(BQ76930_inst_S *inst, uint16_t adc)
 	int32_t t1 = 1000000 * thermistor_temperature_table[i];
 	int32_t t2 = 1000000 * thermistor_temperature_table[i + 1];
 
-	return (interpolate(r, r1, r2, t1, t2) / 1000000) - 10;
+	return (interpolate(r, r1, r2, t1, t2) / 1000000);
 }
 
 //static uint8_t BQ76930_adc2TempInternal(BQ76930_inst_S *inst, uint16_t adc)
@@ -204,53 +204,6 @@ HAL_StatusTypeDef BQ76930_init(BQ76930_inst_S *inst, I2C_HandleTypeDef *hi2c, BQ
 
 	uint8_t buf = 0;
 
-//	uint8_t data[256];
-//	memset(data, 0, 256);
-//
-//	for (uint32_t i = 0; i < BQ76930_CELL_COUNT; i++)
-//	{
-//		status = BQ76930_readRegMultiple(inst, BQ76930_REG_VC1_HI + (2 * i), data, 2);
-//		uint16_t raw = ((uint16_t)(data[0] << 8) | data[1]) & 0x3FFF;
-//		printf("status:%d  raw:%d  v:%d\n", status, raw, BQ76930_adc2Volt(inst, raw));
-//	}
-//
-//	status = BQ76930_readReg(inst, BQ76930_REG_SYS_CTRL1, data);
-//	printf("status:%d  data:0x%X\n", status, data[0]);
-//
-//	data[0] = BQ76930_SET_BIT(data[0], BQ76930_REG_SYS_CTRL1_TEMP_SEL, 0);
-//
-//	status = BQ76930_writeReg(inst, BQ76930_REG_SYS_CTRL1, data);
-//	printf("status:%d  data:0x%X\n", status, data[0]);
-//
-//	HAL_Delay(2000);
-//
-//
-//	for (uint32_t i = 0; i < 3; i++)
-//	{
-//		status = BQ76930_readRegMultiple(inst, BQ76930_REG_TS1_HI + (2 * i), data, 2);
-//		uint16_t raw = ((uint16_t)(data[0] << 8) | data[1]) & 0x3FFF;
-//		printf("status:%d  raw:%d  t:%d\n", status, raw, BQ76930_adc2Temp(inst, raw));
-//	}
-//
-//	status = BQ76930_readReg(inst, BQ76930_REG_SYS_CTRL1, data);
-//	printf("status:%d  data:0x%X\n", status, data[0]);
-//
-//	data[0] = BQ76930_SET_BIT(data[0], BQ76930_REG_SYS_CTRL1_TEMP_SEL, 1);
-//
-//	status = BQ76930_writeReg(inst, BQ76930_REG_SYS_CTRL1, data);
-//	printf("status:%d  data:0x%X\n", status, data[0]);
-//
-//	HAL_Delay(2000);
-//
-//	for (uint32_t i = 0; i < 3; i++)
-//	{
-//		status = BQ76930_readRegMultiple(inst, BQ76930_REG_TS1_HI + (2 * i), data, 2);
-//		uint16_t raw = ((uint16_t)(data[0] << 8) | data[1]) & 0x3FFF;
-//		printf("status:%d  raw:%d  t:%d\n", status, raw, BQ76930_adc2TempInternal(inst, raw));
-//	}
-//
-//	while(1);
-
 	// write configuration
 	buf = config->scd_thresh & 0x07;
 
@@ -320,54 +273,6 @@ HAL_StatusTypeDef BQ76930_init(BQ76930_inst_S *inst, I2C_HandleTypeDef *hi2c, BQ
 
 	// clear faults
 	return BQ76930_clearFaults(inst);
-
-
-//	printf("initializing bq76930 ...\n");
-//
-//	uint8_t byte = 0;
-//	HAL_StatusTypeDef status = HAL_OK;
-//
-//	status = BQ76930_readReg(inst, BQ76930_REG_ADCGAIN1, &byte); // 0x95
-//	printf("status:%d  data:0x%X\n", status, byte);
-//
-//	status = BQ76930_readReg(inst, BQ76930_REG_ADCGAIN2, &byte); // 0x81
-//	printf("status:%d  data:0x%X\n", status, byte);
-//
-//	status = BQ76930_readReg(inst, BQ76930_REG_ADCOFFSET, &byte); // 2E
-//	printf("status:%d  data:0x%X\n", status, byte);
-//
-//	// 365 uV/LSB
-//	uint8_t data[2];
-//	status = BQ76930_readRegMultiple(inst, BQ76930_REG_VC1_HI, data, 2);
-//	uint16_t d = (uint16_t)(data[0] << 8) | data[1];
-//	printf("status:%d  mv:%ld\n", status, (365UL * (uint32_t)d) / 1000);
-//
-//	status = BQ76930_readReg(inst, BQ76930_REG_SYS_STAT, &byte);
-//	uint8_t ocd = (byte >> BQ76930_REG_SYS_STAT_OCD) & 1;
-//	uint8_t scd = (byte >> BQ76930_REG_SYS_STAT_SCD) & 1;
-//	uint8_t ov = (byte >> BQ76930_REG_SYS_STAT_OV) & 1;
-//	uint8_t uv = (byte >> BQ76930_REG_SYS_STAT_UV) & 1;
-//	printf("status:%d  data:0x%X  ocd:%d  scd:%d  ov:%d  uv:%d\n", status, byte, ocd, scd, ov, uv);
-//
-//	byte = 0b00001111;
-//	status = BQ76930_writeReg(inst, BQ76930_REG_SYS_STAT, &byte);
-//	printf("status:%d\n", status);
-//
-////	static uint8_t toggleThing = 0;
-////	if (toggleThing)
-////	{
-////		byte = 0b11;
-////		toggleThing = 0;
-////	}
-////	else
-////	{
-//		byte = 0b00;
-////		toggleThing = 1;
-////	}
-//	status = BQ76930_writeReg(inst, BQ76930_REG_SYS_CTRL2, &byte);
-//	printf("status:%d\n", status);
-//
-//	return status;
 }
 
 HAL_StatusTypeDef BQ76930_update(BQ76930_inst_S *inst)
@@ -384,7 +289,8 @@ HAL_StatusTypeDef BQ76930_update(BQ76930_inst_S *inst)
 		return status;
 	}
 
-	inst->faults = buf[0] & 0x1F;
+	inst->faults = buf[0] & 0xF;
+	inst->faults = BQ76930_SET_BIT(inst->faults, BQ76930_FAULT_INTERNAL, (buf[0] >> BQ76930_REG_SYS_STAT_DEVICE_XREADY) & 1);
 
 	// read volt data
 	for (uint32_t i = 0; i < BQ76930_CELL_COUNT; i++)
@@ -473,7 +379,7 @@ uint8_t BQ76930_getFault(BQ76930_inst_S *inst, BQ76930_fault_E fault)
 
 void BQ76930_setBalance(BQ76930_inst_S *inst, BQ76930_cell_E cell, BQ76930_fetState_E state)
 {
-	inst->cb = BQ76930_SET_BIT(inst->cb, 1 << cell, state);
+	inst->cb = BQ76930_SET_BIT(inst->cb, cell, state);
 }
 
 void BQ76930_setCharge(BQ76930_inst_S *inst, BQ76930_fetState_E state)

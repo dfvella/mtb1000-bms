@@ -62,7 +62,7 @@ static const uint16_t thermistor_temperature_table[THERMISTOR_TABLE_LEN] = {
 	70
 };
 
-static uint8_t crc8(uint8_t *data, uint32_t len)
+static uint8_t crc8(const uint8_t *data, uint32_t len)
 {
 	uint8_t crc = 0x00;
 
@@ -164,22 +164,29 @@ static HAL_StatusTypeDef BQ76930_readRegMultiple(BQ76930_inst_S *inst, uint8_t a
 
 	buf[0] = (BQ76930_I2C_ADDR << 1) | 0b1;
 
-	HAL_StatusTypeDef status = HAL_I2C_Mem_Read(inst->hi2c, BQ76930_I2C_ADDR << 1, addr, 1, &buf[1], len + 1, inst->timeout_ms);
+	HAL_StatusTypeDef status = HAL_I2C_Mem_Read(inst->hi2c, BQ76930_I2C_ADDR << 1, addr, 1, &buf[1], 4, inst->timeout_ms);
 
 	if (status != HAL_OK)
 	{
 		return status;
 	}
 
-	// TODO
-//	uint8_t expected_crc = crc8(&buf[0], len + 1);
-//
-//	if (expected_crc != buf[len + 1])
-//	{
-//		return HAL_ERROR;
-//	}
+	uint8_t expected_crc = crc8(&buf[0], 2);
 
-	memcpy(data, &buf[1], len);
+	if (expected_crc != buf[2])
+	{
+		status = HAL_ERROR;
+	}
+
+	expected_crc = crc8(&buf[3], 1);
+
+	if (expected_crc != buf[4])
+	{
+		status = HAL_ERROR;
+	}
+
+	data[1] = buf[3];
+	data[0] = buf[1];
 
 	return status;
 }
@@ -254,7 +261,7 @@ HAL_StatusTypeDef BQ76930_init(BQ76930_inst_S *inst, I2C_HandleTypeDef *hi2c, BQ
 	// enable adc
 	buf = 0;
 	buf = BQ76930_SET_BIT(buf, BQ76930_REG_SYS_CTRL1_ADC_EN, 1);
-	buf = BQ76930_SET_BIT(buf, BQ76930_REG_SYS_CTRL1_TEMP_SEL, 0);
+	buf = BQ76930_SET_BIT(buf, BQ76930_REG_SYS_CTRL1_TEMP_SEL, 1);
 
 	status = BQ76930_writeReg(inst, BQ76930_REG_SYS_CTRL1, &buf);
 
@@ -305,13 +312,13 @@ HAL_StatusTypeDef BQ76930_update(BQ76930_inst_S *inst)
 
 		uint16_t raw = ((uint16_t)(buf[0] << 8) | buf[1]) & 0x3FFF;
 		uint16_t raw_volt = BQ76930_adc2Volt(inst, raw);
-		if ((2500 < raw_volt) && (raw_volt < 4200)) // TODO
-		{
-			inst->data_volts[i] = BQ76930_adc2Volt(inst, raw);
-		}
-//		printf("%d  ", raw);
+//		if ((2500 < raw_volt) && (raw_volt < 4200)) // TODO
+//		{
+			inst->data_volts[i] = raw_volt;
+//		}
+//		printf("0x%X  ", raw);
 	}
-//	printf("\n");
+//	printf("  %d\n", status);
 
 	// read temperature data
 	for (uint32_t i = 0; i < 3; i++)
@@ -325,7 +332,9 @@ HAL_StatusTypeDef BQ76930_update(BQ76930_inst_S *inst)
 
 		uint16_t raw = ((uint16_t)(buf[0] << 8) | buf[1]) & 0x3FFF;
 		inst->data_temps[i] = BQ76930_adc2Temp(inst, raw);
+//		printf("0x%X  ", raw);
 	}
+//	printf("  %d\n", status);
 
 	// set balance control
 	buf[0] = inst->cb & 0x1F;

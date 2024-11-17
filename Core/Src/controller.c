@@ -14,8 +14,8 @@
 
 #define CHARGE_LIMIT_MV 4200
 #define DISCHARGE_LIMIT_MV 3000
-#define BALANCE_HYST_MV 100
-#define CHARGE_HYST_MV 100
+#define BALANCE_HYST_MV 50
+#define BALANCE_COMPLETE_HYST_MV 5
 
 #define BALANCE_GROUP_A 0b1010101010101
 #define BALANCE_GROUP_B 0b0101010101010
@@ -266,16 +266,9 @@ static controller_state_E controller_getNextState(controller_state_E state)
 		{
 			return STATE_FAULT;
 		}
-		else if ((batt_getCellVoltage(CELL_MAX) - batt_getCellVoltage(CELL_MIN)) < BALANCE_HYST_MV)
+		else if ((batt_getCellVoltage(CELL_MAX) - batt_getCellVoltage(CELL_MIN)) < BALANCE_COMPLETE_HYST_MV)
 		{
-			if (batt_getCellVoltage(CELL_MAX) < (CHARGE_LIMIT_MV - CHARGE_HYST_MV))
-			{
-				return STATE_CHARGE;
-			}
-			else
-			{
-				return STATE_SHUTDOWN;
-			}
+			return STATE_SHUTDOWN;
 		}
 		else
 		{

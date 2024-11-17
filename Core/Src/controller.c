@@ -12,7 +12,7 @@
 #define IDLE_TIMEOUT_MS 30000
 #define IDLE_CURRENT_HYST_MA 100
 
-#define CHARGE_LIMIT_MV 4100
+#define CHARGE_LIMIT_MV 4200
 #define DISCHARGE_LIMIT_MV 3000
 #define BALANCE_HYST_MV 100
 #define CHARGE_HYST_MV 100
@@ -155,7 +155,7 @@ static uint32_t controller_updateCapacityRemaining(controller_state_E state, uin
 	case STATE_PRECHARGE:
 	case STATE_DISCHARGE:
 	case STATE_CHARGE:
-		return cap + ((batt_getPackCurrent() * LOOP_PERIOD_MS) / 1000);
+		return cap + ((-1 * batt_getPackCurrent() * LOOP_PERIOD_MS) / 1000);
 
 	case STATE_FAULT:
 	case STATE_SHUTDOWN:
@@ -166,11 +166,6 @@ static uint32_t controller_updateCapacityRemaining(controller_state_E state, uin
 
 static controller_state_E controller_getNextState(controller_state_E state)
 {
-	if (batt_getFaultMask())
-	{
-		return STATE_FAULT;
-	}
-
 	switch (state)
 	{
 	case STATE_OFF:
@@ -184,7 +179,11 @@ static controller_state_E controller_getNextState(controller_state_E state)
 		}
 
 	case STATE_PRECHARGE:
-		if ((batt_getCellVoltage(CELL_SUM) - batt_getPackVoltage()) < PRECHARGE_THRESHOLD_MV)
+		if (batt_getFaultMask())
+		{
+			return STATE_FAULT;
+		}
+		else if ((batt_getCellVoltage(CELL_SUM) - batt_getPackVoltage()) < PRECHARGE_THRESHOLD_MV)
 		{
 			return STATE_IDLE;
 		}
@@ -198,7 +197,11 @@ static controller_state_E controller_getNextState(controller_state_E state)
 		}
 
 	case STATE_IDLE:
-		if (display_getButtonLongPress())
+		if (batt_getFaultMask())
+		{
+			return STATE_FAULT;
+		}
+		else if (display_getButtonLongPress())
 		{
 			return STATE_SHUTDOWN;
 		}
@@ -210,17 +213,21 @@ static controller_state_E controller_getNextState(controller_state_E state)
 		{
 			return STATE_CHARGE;
 		}
-		else if ((HAL_GetTick() - idle_start_time) >= IDLE_TIMEOUT_MS)
-		{
-			return STATE_SHUTDOWN;
-		}
+//		else if ((HAL_GetTick() - idle_start_time) >= IDLE_TIMEOUT_MS)
+//		{
+//			return STATE_SHUTDOWN;
+//		}
 		else
 		{
 			return STATE_IDLE;
 		}
 
 	case STATE_DISCHARGE:
-		if (batt_getPackCurrent() < IDLE_CURRENT_HYST_MA)
+		if (batt_getFaultMask())
+		{
+			return STATE_FAULT;
+		}
+		else if (batt_getPackCurrent() < IDLE_CURRENT_HYST_MA)
 		{
 			return STATE_IDLE;
 		}
@@ -230,7 +237,11 @@ static controller_state_E controller_getNextState(controller_state_E state)
 		}
 
 	case STATE_CHARGE:
-		if (batt_getCellVoltage(CELL_MAX) >= CHARGE_LIMIT_MV)
+		if (batt_getFaultMask())
+		{
+			return STATE_FAULT;
+		}
+		else if (batt_getCellVoltage(CELL_MAX) >= CHARGE_LIMIT_MV)
 		{
 			if ((batt_getCellVoltage(CELL_MAX) - batt_getCellVoltage(CELL_MIN)) > BALANCE_HYST_MV)
 			{
@@ -251,7 +262,11 @@ static controller_state_E controller_getNextState(controller_state_E state)
 		}
 
 	case STATE_BALANCE:
-		if ((batt_getCellVoltage(CELL_MAX) - batt_getCellVoltage(CELL_MIN)) < BALANCE_HYST_MV)
+		if (batt_getFaultMask())
+		{
+			return STATE_FAULT;
+		}
+		else if ((batt_getCellVoltage(CELL_MAX) - batt_getCellVoltage(CELL_MIN)) < BALANCE_HYST_MV)
 		{
 			if (batt_getCellVoltage(CELL_MAX) < (CHARGE_LIMIT_MV - CHARGE_HYST_MV))
 			{
@@ -317,7 +332,7 @@ static void controller_setFetState(controller_state_E state)
 	case STATE_PRECHARGE:
 		batt_setFetState(FET_PCH, FET_ON);
 		batt_setFetState(FET_CHG, FET_ON);
-		batt_setFetState(FET_DSG, FET_OFF);
+		batt_setFetState(FET_DSG, FET_OFF); // TODO
 		break;
 
 	case STATE_IDLE:
@@ -439,7 +454,9 @@ void controller_run(void)
 		display_setSOC(display_soc);
 		display_update(controller_state);
 
-		HAL_UART_Transmit_DMA(&hlpuart1, (uint8_t*)&controller_data, sizeof(controller_data_S));
+		HAL_UART_Transmit_IT(&hlpuart1, (uint8_t*)&controller_data, sizeof(controller_data_S));
+
+//		printf("Hello World\n");
 
 		if (controller_state == STATE_SHUTDOWN)
 		{

@@ -1,5 +1,6 @@
 #include "bq76930.h"
 #include <string.h>
+#include <stdio.h>
 
 #define BQ76930_SET_BIT(bits, bit, value) ((bits & ~(1 << bit)) | (value << bit))
 #define BQ76930_GET_BIT(bits, bit) (bits & (1 << bit))
@@ -232,7 +233,7 @@ HAL_StatusTypeDef BQ76930_init(BQ76930_inst_S *inst, I2C_HandleTypeDef *hi2c, BQ
 		return status;
 	}
 
-	buf = (BQ76930_volt2Adc(inst, config->ov_thresh) >> 4) & 0xF;
+	buf = (BQ76930_volt2Adc(inst, config->ov_thresh) >> 4) & 0xFF;
 
 	status = BQ76930_writeReg(inst, BQ76930_REG_OV_TRIP, &buf);
 
@@ -241,7 +242,7 @@ HAL_StatusTypeDef BQ76930_init(BQ76930_inst_S *inst, I2C_HandleTypeDef *hi2c, BQ
 		return status;
 	}
 
-	buf = (BQ76930_volt2Adc(inst, config->uv_thresh) >> 4) & 0xF;
+	buf = (BQ76930_volt2Adc(inst, config->uv_thresh) >> 4) & 0xFF;
 
 	status = BQ76930_writeReg(inst, BQ76930_REG_UV_TRIP, &buf);
 
@@ -303,8 +304,14 @@ HAL_StatusTypeDef BQ76930_update(BQ76930_inst_S *inst)
 		}
 
 		uint16_t raw = ((uint16_t)(buf[0] << 8) | buf[1]) & 0x3FFF;
-		inst->data_volts[i] = BQ76930_adc2Volt(inst, raw);
+		uint16_t raw_volt = BQ76930_adc2Volt(inst, raw);
+		if ((2500 < raw_volt) && (raw_volt < 4200)) // TODO
+		{
+			inst->data_volts[i] = BQ76930_adc2Volt(inst, raw);
+		}
+//		printf("%d  ", raw);
 	}
+//	printf("\n");
 
 	// read temperature data
 	for (uint32_t i = 0; i < 3; i++)

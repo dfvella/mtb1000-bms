@@ -200,8 +200,8 @@ void batt_update(void)
 	uint8_t fault_bq = BQ76930_getFault(&bq, BQ76930_FAULT_INTERNAL);
 	uint8_t fault_ot = 0;
 
-	fault_ov |= (v_max > OV_THRESH_MV);
-	fault_uv |= (v_min < UV_THRESH_MV);
+//	fault_ov |= (v_max > OV_THRESH_MV);
+//	fault_uv |= (v_min < UV_THRESH_MV);
 	fault_ot |= (t_max > OT_THRESH_C);
 
 	faults = BATT_SET_BIT(faults, FAULT_OV, fault_ov);

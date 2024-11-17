@@ -40,6 +40,13 @@ void display_init(void)
 
 void display_update(controller_state_E state)
 {
+	if (controller_state != state)
+	{
+		last_controller_state_change = HAL_GetTick();
+
+		controller_state = state;
+	}
+
 	uint8_t blink = ((HAL_GetTick() - last_controller_state_change) % 1000) < 500;
 	uint8_t blink2 = ((HAL_GetTick() - last_controller_state_change) % 500) < 250;
 
@@ -69,10 +76,10 @@ void display_update(controller_state_E state)
 	switch (state)
 	{
 	case STATE_OFF:
-		HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin, last_controller_state_change > 0);
-		HAL_GPIO_WritePin(LED_2_GPIO_Port, LED_2_Pin, last_controller_state_change > 250);
-		HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin, last_controller_state_change > 500);
-		HAL_GPIO_WritePin(LED_4_GPIO_Port, LED_4_Pin, last_controller_state_change > 750);
+		HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin, (HAL_GetTick() - last_controller_state_change) > 0);
+		HAL_GPIO_WritePin(LED_2_GPIO_Port, LED_2_Pin, (HAL_GetTick() - last_controller_state_change) > 250);
+		HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin, (HAL_GetTick() - last_controller_state_change) > 500);
+		HAL_GPIO_WritePin(LED_4_GPIO_Port, LED_4_Pin, (HAL_GetTick() - last_controller_state_change) > 750);
 		break;
 
 	case STATE_PRECHARGE:
@@ -124,13 +131,6 @@ void display_update(controller_state_E state)
 		HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(LED_4_GPIO_Port, LED_4_Pin, GPIO_PIN_RESET);
 		break;
-	}
-
-	if (controller_state != state)
-	{
-		last_controller_state_change = HAL_GetTick();
-
-		controller_state = state;
 	}
 
 	uint8_t current_button_state = HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin);
